@@ -1,0 +1,34 @@
+month_list = [
+    '01', '02', '03', '09', '10', '11', '12'
+]
+
+year_list = [
+    '2000', '2001', '2002', '2003', '2004', '2005', '2006',
+    '2007', '2008', '2009', '2010', '2011', '2012', '2013',
+    '2014', '2015', '2016', '2017', '2018', '2019', '2000'
+]
+
+location_lat_lon = {
+    "Christchurch": [(-43.64,-43.384), (172.381,172.8139)],
+    "Napier": [(-39.57195,-39.385), (176.8086,176.9246)],
+    "Greymouth": [(-42.557,-42.376), (171.129, 171.250)]
+}
+
+def generate_monthly_fwi_count(mo):
+    """Will an array of FWI count over threshold 17 and returns a list of FWI count over threshold for a given month."""
+    
+    all_data =xr.open_mfdataset("/mnt/data/FWI_WRF/FWI_*nc*", chunks={"time":72, "height":1},parallel=True)
+    location_monthly_fwi_count = []
+    
+    for location, [(lat_min, lat_max),(lon_min, lon_max)] in location_lat_lon.items():
+        location_data = all_data.sel(lat=slice(lat_min, lat_max), lon=slice(lon_min, lon_max))
+        location_fwi = location_data.FWI
+
+        month = mo
+        
+        for year in year_list: 
+            location_month = location_fwi.sel(time=f"{year}-{month}")
+            location_over17 = (location_month>=17).sum(dim='time').sum(dim=['lat','lon']).compute()
+   
+    location_monthly_fwi_count.append(location_over17)
+    return location_monthly_fwi_count
